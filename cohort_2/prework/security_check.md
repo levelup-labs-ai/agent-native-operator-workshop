@@ -66,7 +66,48 @@ Docker container, the host handles that layer.
 
 ## 4. OpenClaw Security Audit
 
-Run the built-in security audit:
+Before running the audit, make sure the local CLI has the operator
+scopes it needs for diagnostics. List paired devices:
+
+```
+openclaw devices list
+```
+
+Find the local `cli` operator device. It should have `operator.admin`
+(or the full set of operator scopes needed for diagnostics). If the
+local CLI already has `operator.admin`, continue to the audit.
+
+If the local CLI is paired but missing `operator.admin`, create the
+scope-upgrade request by running a deep status check:
+
+```
+openclaw status --deep
+```
+
+Then list devices again and review the pending request:
+
+```
+openclaw devices list
+```
+
+**Expected:** The pending request is a scope upgrade for the local
+`cli` operator device. Approve only that exact request ID:
+
+```
+openclaw devices approve <requestId>
+```
+
+Verify the local CLI now has `operator.admin`:
+
+```
+openclaw devices list
+```
+
+Do not approve unknown browser, mobile, node, or remote-device requests
+as part of this pre-work. If the pending request is not clearly the
+local CLI/operator device, report **FAIL** and ask for help.
+
+Then run the built-in security audit:
 
 ```
 openclaw security audit --deep
