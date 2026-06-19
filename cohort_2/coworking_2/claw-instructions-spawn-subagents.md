@@ -9,6 +9,8 @@ The workshop ships two sub-agent prompt templates under `agents/`. You'll use th
 
 Do not rely on the templates being registered as callable named agents. For this worksheet, always spawn isolated sub-sessions and pass the smaller worker model explicitly through `sessions_spawn.model`.
 
+Model-routing rule: `agents.defaults.models` is the configured model catalog/allowlist, not the sub-agent default. Adding `openai/gpt-5.4-mini` there only makes it available to OpenClaw. The actual smaller-model routing for this worksheet comes from the explicit `sessions_spawn.model` value on each child session.
+
 ## Step 1: choose the smaller model, then finish installing the sub-agents
 
 (a) Choose the smaller worker model from the user's current default:
@@ -24,12 +26,28 @@ If `smaller_model` is `anthropic/claude-haiku-4-5`, skip the OpenAI setup below.
 
 1. Run `openclaw models list --all --provider openai --plain` and confirm `openai/gpt-5.4-mini` appears in the full catalog.
 2. Run `openclaw models list --plain` and confirm `openai/gpt-5.4-mini` appears in the configured models. OpenClaw shows configured models by default from `agents.defaults.models`, which is the allowlist/catalog of models OpenClaw can use.
-3. If `openai/gpt-5.4-mini` appears in the full catalog but not in the configured models, add it to `agents.defaults.models`.
+3. If `openai/gpt-5.4-mini` appears in the full catalog but not in the configured models, add it with the OpenClaw config CLI. Do not hand-edit `openclaw.json` for this step.
+
+   First dry-run:
+
+   ```bash
+   openclaw config set agents.defaults.models '{"openai/gpt-5.4-mini":{}}' --strict-json --merge --dry-run
+   ```
+
+   If the dry-run shows only the intended additive change, apply it:
+
+   ```bash
+   openclaw config set agents.defaults.models '{"openai/gpt-5.4-mini":{}}' --strict-json --merge
+   openclaw config validate
+   ```
+
+   If the command says the gateway must restart before the change applies, restart or reload OpenClaw, then run `openclaw models list --plain` again and confirm `openai/gpt-5.4-mini` appears.
 
 (c) Verify the smaller model is usable before continuing:
 
 1. Run a one-shot test sub-session with `sessions_spawn.model` set to `smaller_model`.
-2. Confirm the child session reports `smaller_model`, not the parent model.
+2. Confirm the child session reports `smaller_model`, not the parent model. Check the child rollout/log/session metadata, not just the parent agent's prose.
+3. If the child inherits the parent model, stop the worksheet run. Re-check that the smaller model appears in `openclaw models list --plain`, restart or reload OpenClaw if config changed, and rerun the one-shot test. If it still inherits the parent after that, report a model override failure instead of claiming the cheaper route worked.
 
 (d) Open the relevant prompt template before spawning:
 
@@ -71,12 +89,12 @@ On approval:
 - Spawn isolated sub-sessions in parallel with `sessions_spawn`.
 - For each spawned sub-session, set `model` / `sessions_spawn.model` to `smaller_model`.
 - Put the relevant template instructions (`doc_reader` or `research_worker`) plus the assigned file path, bucket of paths, or research angle directly in that sub-session's task prompt.
-- After spawning, verify the child sessions actually used `smaller_model` by checking the log file for each session.
-- Wait for all of them to come back.
+- After spawning, verify the child sessions actually used `smaller_model` by checking each child's rollout/log/session metadata.
+- Wait for all of them to come back. If the parent chat does not render the final synthesis even though child runs are terminal/delivered, inspect `/subagents list`, `/subagents info`, `/subagents log`, or the session metadata/results directly, then synthesize from the child outputs.
 - Synthesize into the final answer.
 - Show the answer to the user.
 
-If the child sessions inherit the parent model instead of `smaller_model`, tell the user plainly: The fan-out still works but the cost win did not apply. The failure is likely a harness/runtime issue.
+If the child sessions inherit the parent model instead of `smaller_model`, tell the user plainly: The fan-out still works but the cost win did not apply. Confirm the configured model list, restart/reload state, and explicit `sessions_spawn.model` value before treating it as an OpenClaw runtime issue.
 
 ## Step 5: summarize, show cost, and stop
 
