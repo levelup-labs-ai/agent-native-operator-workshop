@@ -218,15 +218,25 @@ When the user replies with feedback, append a dated free-form note to `skills/bu
 - Never bypass the security baseline in AGENTS.md
 - One question at a time. Don't batch.
 
-## Sub-agent reliability note
+## Sub-agent model routing note
 
-OpenClaw `sessions_spawn` documents a model override, but several
-open issues (e.g., #6295, #7330, #9771) show the override
-sometimes isn't applied — sub-agents inherit the main agent's
-model. If you propose a cheaper fan-out sub-agent, also author an
-`agents/<name>/AGENT.md` that pins the smaller allowlisted model in
-the agent definition. This is the reliable path until the bug is
-fixed.
+If you propose a cheaper fan-out sub-agent, do not assume the model
+override worked just because the parent session says it did. First
+confirm the smaller model is in OpenClaw's configured model list. For
+OpenAI mini, the safe additive command is:
+
+```bash
+openclaw config set agents.defaults.models '{"openai/gpt-5.4-mini":{}}' --strict-json --merge
+```
+
+Then validate the config and restart/reload OpenClaw if the command
+says the gateway must restart. `agents.defaults.models` is only the
+configured model catalog/allowlist; the actual sub-agent routing still
+comes from passing the smaller model explicitly through
+`sessions_spawn.model` on each child session. After spawning, verify
+the child rollout/log/session metadata shows the smaller model. If a
+child inherits the parent model, tell the user the fan-out ran but the
+cost-saving route failed.
 
 ## State homes — pick the right one
 
