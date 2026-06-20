@@ -126,6 +126,8 @@ Then end with:
 - The synthesized research answer.
 - The cost table.
 
+If the cost for any model you're using isn't available locally, search the web to find the latest pricing on the model platform. Make sure to capture both input and output token costs so the estimates are accurate.
+
 End with the feedback invitation:
 
 > Anything you want me to change for next time? What worked, what didn't?
