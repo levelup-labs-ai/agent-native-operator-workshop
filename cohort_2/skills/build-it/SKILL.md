@@ -223,10 +223,13 @@ When the user replies with feedback, append a dated free-form note to `skills/bu
 If you propose a cheaper fan-out sub-agent, do not assume the model
 override worked just because the parent session says it did. First
 confirm the smaller model is in OpenClaw's configured model list. For
-OpenAI mini, the safe additive command is:
+OpenAI mini, pick the variant that matches the user's auth route —
+`openai/gpt-5.4-mini` for a platform API key, `openai-codex/gpt-5.4-mini`
+for a ChatGPT subscription / OAuth (check the auth overview in
+`openclaw models status`). The safe additive command is:
 
 ```bash
-openclaw config set agents.defaults.models '{"openai/gpt-5.4-mini":{}}' --strict-json --merge
+openclaw config set agents.defaults.models '{"<chosen-model>":{}}' --strict-json --merge
 ```
 
 Then validate the config and restart/reload OpenClaw if the command
@@ -236,7 +239,11 @@ comes from passing the smaller model explicitly through
 `sessions_spawn.model` on each child session. After spawning, verify
 the child rollout/log/session metadata shows the smaller model. If a
 child inherits the parent model, tell the user the fan-out ran but the
-cost-saving route failed.
+cost-saving route failed. If a child instead fails with `insufficient
+permissions, missing api.responses.write` (or another missing-scope/auth
+error), that is an OpenAI auth problem, not config — do not re-run config
+set; switch to the other variant or re-authenticate (see the Coworking 2
+troubleshooting notes).
 
 ## State homes — pick the right one
 
